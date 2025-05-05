@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game of Cryptos</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=MedievalSharp&display=swap');
+        
+        body {
+            font-family: 'Cinzel', serif;
+            background-color: #0a0a0a;
+            color: #d4af37;
+            margin: 0;
+            padding: 20px;
+            background-image: 
+                linear-gradient(rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.85)),
+                url('https://images.unsplash.com/photo-1578662996442-48f60103fc96?auto=format&fit=crop&w=1920&q=80');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            min-height: 100vh;
+            position: relative;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 100vh;
+            background: 
+                linear-gradient(180deg, rgba(139,0,0,0.1) 0%, rgba(0,0,0,0) 100%),
+                repeating-linear-gradient(
+                    45deg,
+                    rgba(139, 0, 0, 0.1) 0px,
+                    rgba(139, 0, 0, 0.1) 2px,
+                    transparent 2px,
+                    transparent 4px
+                );
+            pointer-events: none;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 30px;
+            background: linear-gradient(to bottom, 
+                rgba(20, 20, 20, 0.95), 
+                rgba(10, 10, 10, 0.98));
+            border: 3px solid #8b0000;
+            border-radius: 5px;
+            box-shadow: 
+                0 0 20px rgba(139, 0, 0, 0.3),
+                inset 0 0 30px rgba(139, 0, 0, 0.2);
+            position: relative;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: -3px;
+            left: -3px;
+            right: -3px;
+            bottom: -3px;
+            background: linear-gradient(45deg, 
+                #8b0000, 
+                transparent 20%,
+                transparent 80%,
+                #8b0000);
+            border-radius: 5px;
+            z-index: -1;
+        }
+
+        h1 {
+            text-align: center;
+            color: #8b0000;
+            text-shadow: 
+                0 0 10px rgba(139, 0, 0, 0.5),
+                2px 2px 4px rgba(0, 0, 0, 0.8);
+            font-size: 3em;
+            margin-bottom: 40px;
+            font-family: 'MedievalSharp', cursive;
+            letter-spacing: 2px;
+            position: relative;
+        }
+
+        h1::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 2px;
+            background: linear-gradient(90deg, 
+                transparent, 
+                #8b0000,
+                transparent);
+        }
+
+        .price-container {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 30px;
+            gap: 30px;
+        }
+
+        .price-box {
+            background: linear-gradient(45deg, 
+                rgba(20, 20, 20, 0.9), 
+                rgba(30, 30, 30, 0.9));
+            padding: 25px;
+            border: 2px solid #8b0000;
+            border-radius: 5px;
+            text-align: center;
+            width: 220px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .price-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, 
+                transparent,
+                rgba(139, 0, 0, 0.8),
+                transparent);
+            transform: translateX(-100%);
+            transition: transform 0.5s ease;
+        }
+
+        .price-box:hover::before {
+            transform: translateX(100%);
+        }
+
+        .price-box:hover {
+            transform: translateY(-5px);
+            box-shadow: 
+                0 5px 15px rgba(139, 0, 0, 0.3),
+                0 0 20px rgba(139, 0, 0, 0.2);
+        }
+
+        .price-label {
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            color: #d4af37;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+            font-weight: 700;
+        }
+
+        .price-value {
+            font-size: 1.8em;
+            color: #fff;
+            text-shadow: 
+                0 0 10px rgba(139, 0, 0, 0.5),
+                2px 2px 4px rgba(0, 0, 0, 0.8);
+            font-weight: 900;
+        }
+
+        @keyframes bloodDrip {
+            0% { transform: scaleY(0); opacity: 0; }
+            100% { transform: scaleY(1); opacity: 0.8; }
+        }
+
+        .motto {
+            text-align: center;
+            font-style: italic;
+            color: #8b0000;
+            margin-top: 40px;
+            font-size: 1.4em;
+            text-shadow: 
+                0 0 10px rgba(139, 0, 0, 0.3),
+                2px 2px 4px rgba(0, 0, 0, 0.8);
+            position: relative;
+            padding-top: 20px;
+        }
+
+        .motto::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2px;
+            height: 20px;
+            background: #8b0000;
+            animation: bloodDrip 2s ease-in infinite;
+            transform-origin: top;
+        }
+
+        @keyframes glow {
+            0% { text-shadow: 0 0 10px rgba(139, 0, 0, 0.3), 2px 2px 4px rgba(0, 0, 0, 0.8); }
+            50% { text-shadow: 0 0 20px rgba(139, 0, 0, 0.6), 2px 2px 4px rgba(0, 0, 0, 0.8); }
+            100% { text-shadow: 0 0 10px rgba(139, 0, 0, 0.3), 2px 2px 4px rgba(0, 0, 0, 0.8); }
+        }
+
+        .price-value {
+            animation: glow 2s infinite;
+        }
+
+        .error-message {
+            color: #8b0000;
+            text-align: center;
+            margin-top: 20px;
+            font-style: italic;
+            animation: glow 1s infinite;
+        }
+
+        .connection-status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 8px 15px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #8b0000;
+        }
+
+        .connection-status.connected {
+            color: #4CAF50;
+            border-color: #4CAF50;
+        }
+
+        .connection-status.disconnected {
+            color: #8b0000;
+            border-color: #8b0000;
+            animation: glow 1s infinite;
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=MedievalSharp&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="connection-status" id="connectionStatus">Connecting...</div>
+    <div class="container">
+        <h1>Game of Cryptos</h1>
+        {% if error %}
+        <div class="error-message">{{ error }}</div>
+        {% endif %}
+        <div class="price-container">
+            <div class="price-box">
+                <div class="price-label">Bitcoin (BTC)</div>
+                <div class="price-value" id="btc-price">${{ "%.2f"|format(btc_price) }}</div>
+            </div>
+            <div class="price-box">
+                <div class="price-label">Ethereum (ETH)</div>
+                <div class="price-value" id="eth-price">${{ "%.2f"|format(eth_price) }}</div>
+            </div>
+        </div>
+        <p class="motto">"When you play the game of trades, you win or you lose."</p>
+    </div>
+
+    <script>
+        let failedAttempts = 0;
+        const connectionStatus = document.getElementById('connectionStatus');
+
+        function updateConnectionStatus(connected) {
+            connectionStatus.textContent = connected ? "Connected" : "Disconnected - Retrying...";
+            connectionStatus.className = `connection-status ${connected ? 'connected' : 'disconnected'}`;
+        }
+
+        function updatePrices() {
+            updateConnectionStatus(false);
+            fetch('/api/prices')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('btc-price').textContent = '$' + parseFloat(data.data.BTC).toFixed(2);
+                        document.getElementById('eth-price').textContent = '$' + parseFloat(data.data.ETH).toFixed(2);
+                        updateConnectionStatus(true);
+                        failedAttempts = 0;
+                    } else {
+                        throw new Error(data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    failedAttempts++;
+                    updateConnectionStatus(false);
+                    
+                    // Increase retry interval after multiple failures
+                    const retryInterval = Math.min(10000 * Math.pow(1.5, failedAttempts - 1), 30000);
+                    setTimeout(updatePrices, retryInterval);
+                });
+        }
+
+        // Initial update
+        updatePrices();
+
+        // Regular updates
+        setInterval(() => {
+            if (failedAttempts === 0) {
+                updatePrices();
+            }
+        }, 10000);
+    </script>
+</body>
+</html> 
