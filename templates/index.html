@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Game of Cryptos</title>
+    <title>Game of Thrones Trading Bot</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=MedievalSharp&display=swap');
         
@@ -234,13 +235,65 @@
             border-color: #8b0000;
             animation: glow 1s infinite;
         }
+
+        .chart-container {
+            background: rgba(44, 62, 80, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        #simulationChart {
+            width: 100%;
+            height: 500px;
+            background: transparent;
+        }
+
+        .blood-effect {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle, rgba(231, 76, 60, 0.1) 0%, transparent 70%);
+            animation: pulse 2s infinite;
+            z-index: 1;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.3; }
+            50% { opacity: 0.7; }
+            100% { opacity: 0.3; }
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .control-button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .control-button:hover {
+            background: #2980b9;
+        }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=MedievalSharp&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="connection-status" id="connectionStatus">Connecting...</div>
     <div class="container">
-        <h1>Game of Cryptos</h1>
+        <h1>Game of Thrones Trading Bot</h1>
         {% if error %}
         <div class="error-message">{{ error }}</div>
         {% endif %}
@@ -254,12 +307,21 @@
                 <div class="price-value" id="eth-price">${{ "%.2f"|format(eth_price) }}</div>
             </div>
         </div>
+        <div class="chart-container">
+            <div id="simulationChart"></div>
+        </div>
+        <div class="controls">
+            <button class="control-button" onclick="toggleSimulation()">Start/Stop Simulation</button>
+            <button class="control-button" onclick="resetSimulation()">Reset</button>
+        </div>
         <p class="motto">"When you play the game of trades, you win or you lose."</p>
     </div>
 
     <script>
         let failedAttempts = 0;
         const connectionStatus = document.getElementById('connectionStatus');
+        let simulationInterval;
+        let isSimulationRunning = false;
 
         function updateConnectionStatus(connected) {
             connectionStatus.textContent = connected ? "Connected" : "Disconnected - Retrying...";
@@ -291,8 +353,86 @@
                 });
         }
 
+        function updateSimulation() {
+            fetch('/api/simulation/data')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const simData = data.data;
+                        Plotly.update('simulationChart', {
+                            x: [simData.timestamp, simData.timestamp, simData.timestamp],
+                            y: [simData.close, simData.sma_20, simData.sma_50]
+                        });
+                    }
+                })
+                .catch(error => console.error('Error updating simulation:', error));
+        }
+
+        function toggleSimulation() {
+            if (isSimulationRunning) {
+                clearInterval(simulationInterval);
+                isSimulationRunning = false;
+            } else {
+                simulationInterval = setInterval(updateSimulation, 1000);
+                isSimulationRunning = true;
+            }
+        }
+
+        function resetSimulation() {
+            clearInterval(simulationInterval);
+            isSimulationRunning = false;
+            Plotly.newPlot('simulationChart', [trace1, trace2, trace3], layout);
+        }
+
+        // Initialize the chart with empty data
+        const trace1 = {
+            x: [],
+            y: [],
+            name: 'Price',
+            type: 'scatter',
+            line: { color: '#e74c3c' }
+        };
+
+        const trace2 = {
+            x: [],
+            y: [],
+            name: 'SMA 20',
+            type: 'scatter',
+            line: { color: '#3498db' }
+        };
+
+        const trace3 = {
+            x: [],
+            y: [],
+            name: 'SMA 50',
+            type: 'scatter',
+            line: { color: '#2ecc71' }
+        };
+
+        const layout = {
+            title: 'BTC/USDT Price Simulation',
+            plot_bgcolor: 'rgba(44, 62, 80, 0.8)',
+            paper_bgcolor: 'rgba(44, 62, 80, 0)',
+            font: { color: '#ffffff' },
+            xaxis: {
+                title: 'Time',
+                gridcolor: 'rgba(255, 255, 255, 0.1)',
+                zerolinecolor: 'rgba(255, 255, 255, 0.1)'
+            },
+            yaxis: {
+                title: 'Price (USDT)',
+                gridcolor: 'rgba(255, 255, 255, 0.1)',
+                zerolinecolor: 'rgba(255, 255, 255, 0.1)'
+            },
+            showlegend: true,
+            legend: { font: { color: '#ffffff' } }
+        };
+
+        Plotly.newPlot('simulationChart', [trace1, trace2, trace3], layout);
+
         // Initial update
         updatePrices();
+        updateSimulation();
 
         // Regular updates
         setInterval(() => {

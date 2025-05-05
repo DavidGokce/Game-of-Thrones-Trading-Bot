@@ -5,6 +5,7 @@ import logging
 from dotenv import load_dotenv
 import time
 from functools import wraps
+from simulation import TradingSimulator
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -35,10 +36,12 @@ def init_client():
 
 try:
     client = init_client()
-    logger.info("Binance client initialized successfully")
+    simulator = TradingSimulator(client)
+    logger.info("Binance client and simulator initialized successfully")
 except Exception as e:
     logger.error(f"Failed to initialize Binance client: {e}")
     client = None
+    simulator = None
 
 @retry_on_error(max_retries=2)
 def get_crypto_prices():
@@ -82,6 +85,24 @@ def get_prices():
             'success': False,
             'error': str(e)
         }), 503  # Service Unavailable
+
+@app.route('/api/simulation/data')
+def get_simulation_data():
+    try:
+        if not simulator:
+            raise Exception("Simulator not initialized")
+        
+        data = simulator.get_current_simulation_data()
+        return jsonify({
+            'success': True,
+            'data': data
+        })
+    except Exception as e:
+        logger.error(f"Error in simulation API: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 503
 
 if __name__ == '__main__':
     try:
