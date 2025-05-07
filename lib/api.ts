@@ -13,26 +13,26 @@ export function formatLargeNumber(num: number): string {
   }
 }
 
-// Transform API asset to our application format
+// Transform CoinMarketCap API asset to our application format
 export function transformAsset(asset: Asset): TransformedAsset {
   return {
-    id: asset.id,
-    rank: Number.parseInt(asset.rank),
+    id: asset.symbol.toLowerCase(),
+    rank: asset.cmc_rank,
     name: asset.name,
     symbol: asset.symbol,
-    price: Number.parseFloat(asset.priceUsd),
-    change: Number.parseFloat(asset.changePercent24Hr),
-    volume: formatLargeNumber(Number.parseFloat(asset.volumeUsd24Hr)),
-    marketCap: formatLargeNumber(Number.parseFloat(asset.marketCapUsd)),
-    supply: formatLargeNumber(Number.parseFloat(asset.supply)),
-    maxSupply: asset.maxSupply ? formatLargeNumber(Number.parseFloat(asset.maxSupply)) : null,
+    price: asset.quote.USD.price,
+    change: asset.quote.USD.percent_change_24h,
+    volume: formatLargeNumber(asset.quote.USD.volume_24h),
+    marketCap: formatLargeNumber(asset.quote.USD.market_cap),
+    supply: formatLargeNumber(asset.circulating_supply),
+    maxSupply: asset.max_supply ? formatLargeNumber(asset.max_supply) : null,
   }
 }
 
 // Fetch top assets using our API proxy
 export async function fetchTopAssets(limit = 10): Promise<TransformedAsset[]> {
   try {
-    // Use our internal API route instead of directly calling CoinCap
+    // Use our internal API route instead of directly calling CoinMarketCap
     const response = await fetch(`/api/crypto/assets?limit=${limit}`)
 
     if (!response.ok) {
@@ -40,6 +40,9 @@ export async function fetchTopAssets(limit = 10): Promise<TransformedAsset[]> {
     }
 
     const data: AssetsResponse = await response.json()
+    if (!data.data) {
+      throw new Error('Invalid response format')
+    }
     return data.data.map(transformAsset)
   } catch (error) {
     console.error("Error fetching top assets:", error)
@@ -57,6 +60,9 @@ export async function fetchAsset(id: string): Promise<TransformedAsset> {
     }
 
     const data = await response.json()
+    if (!data.data) {
+      throw new Error('Invalid response format')
+    }
     return transformAsset(data.data)
   } catch (error) {
     console.error(`Error fetching asset ${id}:`, error)
@@ -68,17 +74,17 @@ export async function fetchAsset(id: string): Promise<TransformedAsset> {
 function getIntervalFromTimeframe(timeframe: TimeFrame): string {
   switch (timeframe) {
     case "1h":
-      return "m5" // 5 minutes
+      return "5m" // 5 minutes
     case "1d":
-      return "m15" // 15 minutes
+      return "15m" // 15 minutes
     case "1w":
-      return "h2" // 2 hours
+      return "2h" // 2 hours
     case "1m":
-      return "h6" // 6 hours
+      return "6h" // 6 hours
     case "1y":
-      return "d1" // 1 day
+      return "1d" // 1 day
     default:
-      return "m15"
+      return "15m"
   }
 }
 
@@ -110,7 +116,7 @@ function getTimeRangeFromTimeframe(timeframe: TimeFrame): { start: number; end: 
   return { start, end }
 }
 
-// Update the fetchAssetHistory function to handle errors better
+// Update the fetchAssetHistory function to handle CoinMarketCap's OHLCV data
 export async function fetchAssetHistory(id: string, timeframe: TimeFrame): Promise<PricePoint[]> {
   try {
     const interval = getIntervalFromTimeframe(timeframe)
@@ -123,34 +129,21 @@ export async function fetchAssetHistory(id: string, timeframe: TimeFrame): Promi
       throw new Error(`API error: ${response.status}`)
     }
 
-    // Get the response text first to log it in case of parsing errors
-    const responseText = await response.text()
-
-    // Try to parse the JSON
-    let data: AssetHistoryResponse
-    try {
-      data = JSON.parse(responseText)
-    } catch (parseError) {
-      console.error("JSON parse error:", parseError)
-      console.error("Response text:", responseText.substring(0, 200)) // Log first 200 chars
-      throw new Error("Failed to parse JSON response")
-    }
+    const data: AssetHistoryResponse = await response.json()
 
     // Validate the data structure
-    if (!data || !Array.isArray(data.data)) {
+    if (!data.data || !data.data[id.toUpperCase()] || !data.data[id.toUpperCase()].quotes) {
       console.error("Invalid data structure:", data)
       throw new Error("Invalid data structure in response")
     }
 
-    return data.data.map((point) => ({
-      price: Number.parseFloat(point.priceUsd),
-      time: point.time,
+    // Transform CoinMarketCap OHLCV data to our price points format
+    return data.data[id.toUpperCase()].quotes.map((quote) => ({
+      price: quote.quote.USD.close,
+      time: new Date(quote.timestamp).getTime(),
     }))
   } catch (error) {
     console.error(`Error fetching history for ${id}:`, error)
-
-    // Return empty array or mock data as fallback
-    // For now, returning empty array to trigger the error state in the UI
-    return []
+    return [] // Return empty array to trigger the error state in the UI
   }
 }

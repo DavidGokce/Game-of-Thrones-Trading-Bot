@@ -1,34 +1,70 @@
-// Types for the CoinCap API responses
-
+// Types for the CoinMarketCap API responses
 export interface Asset {
-  id: string
-  rank: string
-  symbol: string
+  id: number
   name: string
-  supply: string
-  maxSupply: string | null
-  marketCapUsd: string
-  volumeUsd24Hr: string
-  priceUsd: string
-  changePercent24Hr: string
-  vwap24Hr: string
+  symbol: string
+  cmc_rank: number
+  circulating_supply: number
+  max_supply: number | null
+  quote: {
+    USD: {
+      price: number
+      volume_24h: number
+      percent_change_24h: number
+      market_cap: number
+    }
+  }
 }
 
 export interface AssetsResponse {
   data: Asset[]
-  timestamp: number
+  status: {
+    timestamp: string
+    error_code: number
+    error_message: string | null
+    elapsed: number
+    credit_count: number
+  }
 }
 
-export interface AssetHistoryPoint {
-  priceUsd: string
-  time: number
-  date: string
+export interface Quote {
+  timestamp: string
+  quote: {
+    USD: {
+      open: number
+      high: number
+      low: number
+      close: number
+      volume: number
+      market_cap: number
+    }
+  }
 }
 
 export interface AssetHistoryResponse {
-  data: AssetHistoryPoint[]
-  timestamp: number
+  data: {
+    [symbol: string]: {
+      id: number | string
+      name?: string
+      symbol: string
+      quotes: Quote[]
+    }
+  }
+  status?: {
+    timestamp: string
+    error_code: number
+    error_message: string | null
+    elapsed: number
+    credit_count: number
+  }
 }
+
+export interface PricePoint {
+  price: number
+  time: number
+}
+
+export type TimeFrame = "1h" | "1d" | "1w" | "1m" | "1y"
 
 // Transformed types for our application
 export interface TransformedAsset {
@@ -44,11 +80,6 @@ export interface TransformedAsset {
   maxSupply: string | null
 }
 
-export interface PricePoint {
-  price: number
-  time: number
-}
-
 // WebSocket message types
 export interface WebSocketPriceMessage {
   exchange: string
@@ -59,5 +90,3 @@ export interface WebSocketPriceMessage {
   volume: string
   timestamp: number
 }
-
-export type TimeFrame = "1h" | "1d" | "1w" | "1m" | "1y"

@@ -8,7 +8,6 @@ import { BarChart3, CandlestickChart, LineChart } from "lucide-react"
 import { useTheme } from "next-themes"
 import type { TransformedAsset, TimeFrame, PricePoint } from "@/lib/api-types"
 import { fetchAssetHistory } from "@/lib/api"
-import { fetchBinanceHistory } from "@/lib/binance-api"
 import { Skeleton } from "@/components/ui/skeleton"
 
 interface TradingChartProps {
@@ -29,47 +28,35 @@ export function TradingChart({ asset, usePaperTrading = true }: TradingChartProp
     async function fetchData() {
       try {
         setLoading(true)
+        setError(null)
+        const data = await fetchAssetHistory(asset.id, timeframe)
 
-        // Use appropriate API based on paper trading mode
-        const data = usePaperTrading
-          ? await fetchAssetHistory(asset.id, timeframe)
-          : await fetchBinanceHistory(asset.id, timeframe, usePaperTrading)
+        // Validate the data structure
+        if (!Array.isArray(data)) {
+          throw new Error('Invalid data format received from API')
+        }
 
         // Check if we got valid data back
         if (data && data.length > 0) {
-          setChartData(data)
-          setError(null)
-        } else {
-          // Handle empty data case
-          console.error("Received empty chart data")
-          setChartData([])
-          setError("No chart data available. Using mock data.")
+          // Validate each data point
+          const validData = data.every(point => 
+            typeof point === 'object' &&
+            point !== null &&
+            typeof point.price === 'number' &&
+            typeof point.time === 'number'
+          )
 
-          // Generate mock data as fallback
-          const mockData: PricePoint[] = []
-          const now = Date.now()
-          const basePrice = asset.price
-          const points = 50
-
-          for (let i = 0; i < points; i++) {
-            // Create a random walk with slight upward bias
-            const randomChange = (Math.random() - 0.48) * (basePrice * 0.02)
-            const price = basePrice * (1 + (i - points / 2) * 0.001) + randomChange
-            const time = now - (points - i) * ((24 * 60 * 60 * 1000) / points)
-
-            mockData.push({
-              price: Math.max(price, 0.01), // Ensure price is positive
-              time,
-            })
+          if (!validData) {
+            throw new Error('Invalid data point format received from API')
           }
 
-          setChartData(mockData)
+          setChartData(data)
+        } else {
+          throw new Error('No data points received from API')
         }
       } catch (err) {
         console.error("Error fetching chart data:", err)
-        setError("Failed to load chart data. Using mock data.")
-
-        // Generate mock data as fallback (same as above)
+        // Generate mock data as fallback
         const mockData: PricePoint[] = []
         const now = Date.now()
         const basePrice = asset.price
@@ -87,13 +74,14 @@ export function TradingChart({ asset, usePaperTrading = true }: TradingChartProp
         }
 
         setChartData(mockData)
+        setError(err instanceof Error ? err.message : 'Error loading chart data')
       } finally {
         setLoading(false)
       }
     }
 
     fetchData()
-  }, [asset.id, timeframe, asset.price, usePaperTrading])
+  }, [asset.id, timeframe, asset.price])
 
   // Draw chart when data changes or theme changes
   useEffect(() => {

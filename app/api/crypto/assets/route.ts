@@ -1,33 +1,33 @@
 import { NextResponse } from "next/server"
-import { MOCK_ASSETS } from "@/lib/constants"
+import type { AssetsResponse } from "@/lib/api-types"
 
-// API route to proxy requests to CoinCap API
+const CMC_API_KEY = 'f7cdd94d-5862-4910-b8ea-f8a5917f31d5'
+const CMC_API_URL = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest'
+
+// API route to proxy requests to CoinMarketCap API
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const limit = searchParams.get("limit") || "10"
-
   try {
-    // Try to fetch from the CoinCap API
-    const response = await fetch(`https://api.coincap.io/v2/assets?limit=${limit}`, {
+    const { searchParams } = new URL(request.url)
+    const limit = searchParams.get('limit') || '10'
+
+    const response = await fetch(`${CMC_API_URL}?limit=${limit}&convert=USD`, {
       headers: {
-        Accept: "application/json",
-      },
-      next: { revalidate: 60 }, // Cache for 60 seconds
+        'X-CMC_PRO_API_KEY': CMC_API_KEY,
+        'Accept': 'application/json'
+      }
     })
 
     if (!response.ok) {
-      throw new Error(`CoinCap API error: ${response.status}`)
+      throw new Error(`CoinMarketCap API error: ${response.status}`)
     }
 
     const data = await response.json()
     return NextResponse.json(data)
   } catch (error) {
-    console.error("Error fetching from CoinCap API:", error)
-
-    // Return mock data as fallback
-    return NextResponse.json({
-      data: MOCK_ASSETS.slice(0, Number.parseInt(limit)),
-      timestamp: Date.now(),
-    })
+    console.error('Error fetching assets:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch assets' },
+      { status: 500 }
+    )
   }
 }

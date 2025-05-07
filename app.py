@@ -1,5 +1,4 @@
 from flask import Flask, render_template, jsonify, Response
-from binance.client import Client
 import os
 import logging
 from dotenv import load_dotenv
@@ -9,6 +8,8 @@ from simulation import TradingSimulator
 import random
 import traceback
 import json
+import requests
+import requests_cache
 
 # Load environment variables
 load_dotenv()
@@ -17,11 +18,14 @@ load_dotenv()
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
+# Setup request caching
+requests_cache.install_cache('coinmarketcap_cache', expire_after=300)  # Cache for 5 minutes
+
 app = Flask(__name__)
 
-# Mock price data for testing
-MOCK_BTC_PRICE = 50000.0
-MOCK_ETH_PRICE = 3000.0
+# CoinMarketCap API configuration
+CMC_API_KEY = 'f7cdd94d-5862-4910-b8ea-f8a5917f31d5'
+CMC_API_URL = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest'
 
 def retry_on_error(max_retries=3, delay=1):
     def decorator(func):
@@ -39,66 +43,40 @@ def retry_on_error(max_retries=3, delay=1):
         return wrapper
     return decorator
 
-def get_mock_prices():
-    """Generate slightly varying mock prices to simulate market movement"""
-    global MOCK_BTC_PRICE, MOCK_ETH_PRICE
-    
-    # Add small random variations to simulate price movement
-    btc_variation = random.uniform(-100, 100)
-    eth_variation = random.uniform(-10, 10)
-    
-    MOCK_BTC_PRICE = max(10000, MOCK_BTC_PRICE + btc_variation)
-    MOCK_ETH_PRICE = max(1000, MOCK_ETH_PRICE + eth_variation)
-    
-    return {
-        'BTC': round(MOCK_BTC_PRICE, 2),
-        'ETH': round(MOCK_ETH_PRICE, 2)
-    }
-
-# Initialize Binance client with API keys
-@retry_on_error(max_retries=3)
-def init_client():
-    api_key = os.getenv('BINANCE_API_KEY')
-    api_secret = os.getenv('BINANCE_API_SECRET')
-    
-    if not api_key or not api_secret:
-        logger.info("No API keys found. Using mock data mode.")
-        return None
-    
-    return Client(api_key, api_secret)
-
-try:
-    client = init_client()
-except Exception as e:
-    logger.error(f"Failed to initialize client: {e}")
-    client = None
-
-# Always initialize the simulator, even if client is None
-simulator = TradingSimulator(client)
-logger.info("Simulator initialized (client may be None in mock mode)")
-
 @retry_on_error(max_retries=2)
 def get_crypto_prices():
     try:
-        if not client:
-            # Use mock data if no client is available
-            prices = get_mock_prices()
-            logger.info(f"Returning mock prices: {prices}")
-            return prices
-        # Get BTC price
-        btc_ticker = client.get_symbol_ticker(symbol="BTCUSDT")
-        btc_price = float(btc_ticker['price'])
-        # Get ETH price
-        eth_ticker = client.get_symbol_ticker(symbol="ETHUSDT")
-        eth_price = float(eth_ticker['price'])
-        logger.info(f"Successfully fetched prices - BTC: {btc_price}, ETH: {eth_price}")
-        return {
-            'BTC': btc_price,
-            'ETH': eth_price
+        headers = {
+            'X-CMC_PRO_API_KEY': CMC_API_KEY,
+            'Accept': 'application/json'
         }
+        
+        params = {
+            'symbol': 'BTC,ETH',
+            'convert': 'USD'
+        }
+        
+        response = requests.get(CMC_API_URL, headers=headers, params=params)
+        data = response.json()
+        
+        if response.status_code == 200:
+            prices = {
+                'BTC': float(data['data']['BTC']['quote']['USD']['price']),
+                'ETH': float(data['data']['ETH']['quote']['USD']['price'])
+            }
+            logger.info(f"Successfully fetched prices - BTC: {prices['BTC']}, ETH: {prices['ETH']}")
+            return prices
+        else:
+            logger.error(f"API Error: {data.get('status', {}).get('error_message', 'Unknown error')}")
+            raise Exception("Failed to fetch prices from CoinMarketCap")
+            
     except Exception as e:
-        logger.error(f"Error fetching prices, returning mock data: {e}")
-        prices = get_mock_prices()
+        logger.error(f"Error fetching prices: {e}")
+        # Generate mock prices as fallback
+        prices = {
+            'BTC': round(random.uniform(45000, 55000), 2),
+            'ETH': round(random.uniform(2800, 3200), 2)
+        }
         logger.info(f"Returning fallback mock prices: {prices}")
         return prices
 
@@ -129,13 +107,8 @@ def get_prices():
 
 @app.route('/api/simulation/data')
 def get_simulation_data():
-    global simulator
-    global client
     try:
-        logger.info(f"Simulator object: {simulator}")
-        if simulator is None:
-            logger.warning("Simulator was None, re-initializing.")
-            simulator = TradingSimulator(client)
+        simulator = TradingSimulator(None)  # Using mock mode
         data = simulator.get_current_simulation_data()
         logger.info(f"Simulation data returned: {data if data else 'No data'}")
         return Response(
