@@ -89,18 +89,16 @@ class TradingSimulator:
     def get_current_simulation_data(self):
         if self.historical_data is None:
             self.fetch_historical_data()
-        
         if self.current_index >= len(self.historical_data):
             self.current_index = 0
-        
         data = self.historical_data.iloc[max(0, self.current_index-100):self.current_index+1]
         self.current_index += 1
-        
+        # Limit to last 100 points
         return {
-            'timestamp': data['timestamp'].astype(str).tolist(),
-            'close': data['close'].tolist(),
-            'sma_20': data['SMA_20'].tolist(),
-            'sma_50': data['SMA_50'].tolist(),
-            'rsi': data['RSI'].tolist(),
+            'timestamp': data['timestamp'].astype(str).tolist()[-100:],
+            'close': data['close'].tolist()[-100:],
+            'sma_20': data['SMA_20'].tolist()[-100:],
+            'sma_50': data['SMA_50'].tolist()[-100:],
+            'rsi': data['RSI'].tolist()[-100:],
             'symbol': self.symbol
         } 
