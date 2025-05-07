@@ -7,6 +7,7 @@ import time
 from functools import wraps
 from simulation import TradingSimulator
 import random
+import traceback
 
 # Load environment variables
 load_dotenv()
@@ -141,7 +142,7 @@ def get_simulation_data():
             'data': data
         })
     except Exception as e:
-        logger.error(f"Error in simulation API: {e}")
+        logger.error(f"Error in simulation API: {e}\n{traceback.format_exc()}")
         return jsonify({
             'success': False,
             'error': f"Simulation error: {str(e)}"

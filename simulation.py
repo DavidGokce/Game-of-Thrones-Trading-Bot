@@ -14,8 +14,31 @@ class TradingSimulator:
         self.lookback_days = lookback_days
         self.historical_data = None
         self.current_index = 0
+        self.mock_mode = client is None
+        if self.mock_mode:
+            self._generate_mock_data()
         
+    def _generate_mock_data(self):
+        # Generate 200 mock hourly data points
+        now = datetime.now()
+        timestamps = [now - timedelta(hours=i) for i in range(200)][::-1]
+        close_prices = np.cumsum(np.random.randn(200)) + 50000
+        df = pd.DataFrame({
+            'timestamp': timestamps,
+            'close': close_prices,
+        })
+        df['open'] = df['close'] + np.random.uniform(-50, 50, size=200)
+        df['high'] = df[['open', 'close']].max(axis=1) + np.random.uniform(0, 100, size=200)
+        df['low'] = df[['open', 'close']].min(axis=1) - np.random.uniform(0, 100, size=200)
+        df['volume'] = np.random.uniform(10, 100, size=200)
+        df['SMA_20'] = df['close'].rolling(window=20).mean()
+        df['SMA_50'] = df['close'].rolling(window=50).mean()
+        df['RSI'] = self.calculate_rsi(df['close'])
+        self.historical_data = df
+
     def fetch_historical_data(self):
+        if self.mock_mode:
+            return self.historical_data
         try:
             # Calculate start time
             end_time = datetime.now()
@@ -74,7 +97,7 @@ class TradingSimulator:
         self.current_index += 1
         
         return {
-            'timestamp': data['timestamp'].tolist(),
+            'timestamp': data['timestamp'].astype(str).tolist(),
             'close': data['close'].tolist(),
             'sma_20': data['SMA_20'].tolist(),
             'sma_50': data['SMA_50'].tolist(),
