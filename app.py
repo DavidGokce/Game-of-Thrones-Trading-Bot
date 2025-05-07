@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, Response
 from binance.client import Client
 import os
 import logging
@@ -8,6 +8,7 @@ from functools import wraps
 from simulation import TradingSimulator
 import random
 import traceback
+import json
 
 # Load environment variables
 load_dotenv()
@@ -137,16 +138,16 @@ def get_simulation_data():
             simulator = TradingSimulator(client)
         data = simulator.get_current_simulation_data()
         logger.info(f"Simulation data returned: {data if data else 'No data'}")
-        return jsonify({
-            'success': True,
-            'data': data
-        })
+        return Response(
+            json.dumps({'success': True, 'data': data}),
+            mimetype='application/json'
+        )
     except Exception as e:
         logger.error(f"Error in simulation API: {e}\n{traceback.format_exc()}")
-        return jsonify({
-            'success': False,
-            'error': f"Simulation error: {str(e)}"
-        }), 503
+        return Response(
+            json.dumps({'success': False, 'error': f"Simulation error: {str(e)}"}),
+            mimetype='application/json'
+        ), 503
 
 if __name__ == '__main__':
     try:
