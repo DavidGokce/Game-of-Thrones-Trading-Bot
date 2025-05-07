@@ -128,10 +128,14 @@ def get_prices():
 @app.route('/api/simulation/data')
 def get_simulation_data():
     try:
-        if not simulator:
-            raise Exception("Simulator not initialized")
-        
+        logger.info(f"Simulator object: {simulator}")
+        if simulator is None:
+            logger.warning("Simulator was None, re-initializing.")
+            global client
+            global simulator
+            simulator = TradingSimulator(client)
         data = simulator.get_current_simulation_data()
+        logger.info(f"Simulation data returned: {data if data else 'No data'}")
         return jsonify({
             'success': True,
             'data': data
@@ -140,7 +144,7 @@ def get_simulation_data():
         logger.error(f"Error in simulation API: {e}")
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': f"Simulation error: {str(e)}"
         }), 503
 
 if __name__ == '__main__':
