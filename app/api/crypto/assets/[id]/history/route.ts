@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
+import { getEnv } from "@/lib/env"
 
-const CMC_API_KEY = process.env.COINMARKETCAP_API_KEY || 'f7cdd94d-5862-4910-b8ea-f8a5917f31d5'
+const CMC_API_KEY = getEnv('COINMARKETCAP_API_KEY')
 const CMC_API_URL = 'https://pro-api.coinmarketcap.com/v2/cryptocurrency/quotes/historical'
 
 // API route to get asset history from CoinMarketCap
@@ -9,6 +10,10 @@ export async function GET(
   context: { params: { id: string } }
 ) {
   try {
+    if (!CMC_API_KEY) {
+      throw new Error('CoinMarketCap API key not configured')
+    }
+
     const symbol = context.params.id.toUpperCase()
     const { searchParams } = new URL(request.url)
     const interval = searchParams.get('interval') || '15m'
@@ -37,71 +42,17 @@ export async function GET(
     )
 
     if (!response.ok) {
-      // Return mock data with error status for any API error
-      const mockData = generateMockHistoricalData(start, end, interval)
-      return NextResponse.json({
-        data: {
-          [symbol]: {
-            id: symbol,
-            symbol: symbol,
-            quotes: mockData
-          }
-        },
-        status: {
-          error_code: response.status,
-          error_message: `Using mock data - CoinMarketCap API error: ${response.status}`
-        }
-      })
+      throw new Error(`CoinMarketCap API error: ${response.status}`)
     }
 
-    const rawData = await response.json()
-
-    // Transform the data into our expected format
-    if (!rawData.data || !rawData.data[symbol]) {
-      // Return mock data if no real data is available
-      const mockData = generateMockHistoricalData(start, end, interval)
-      return NextResponse.json({
-        data: {
-          [symbol]: {
-            id: symbol,
-            symbol: symbol,
-            quotes: mockData
-          }
-        },
-        status: {
-          error_code: 200,
-          error_message: 'Using mock data - No data available from API'
-        }
-      })
-    }
-
-    return NextResponse.json(rawData)
+    const data = await response.json()
+    return NextResponse.json(data)
   } catch (error) {
-    console.error('Error fetching historical data:', error)
-    
-    // Safely get the parameters even in error case
-    let interval = '15m'
-    const now = Date.now()
-    const end = now.toString()
-    const start = (now - 24 * 60 * 60 * 1000).toString() // 24 hours ago
-    const symbol = context.params.id.toUpperCase()
-
-    // Generate mock data as fallback
-    const mockData = generateMockHistoricalData(start, end, interval)
-
-    return NextResponse.json({
-      data: {
-        [symbol]: {
-          id: symbol,
-          symbol: symbol,
-          quotes: mockData
-        }
-      },
-      status: {
-        error_code: 500,
-        error_message: error instanceof Error ? error.message : 'Unknown error occurred'
-      }
-    })
+    console.error('Error fetching asset history:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch asset history' },
+      { status: 500 }
+    )
   }
 }
 

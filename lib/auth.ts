@@ -3,6 +3,9 @@
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import { z } from "zod"
+import { getEnv } from "@/lib/env"
+import * as bcrypt from "bcryptjs"
+import * as jwt from "jsonwebtoken"
 
 // User type definition
 export interface User {
@@ -11,16 +14,23 @@ export interface User {
   email: string
   image?: string
   createdAt: string
+  hashedPassword?: string
 }
 
-// Mock database of users
-let users: User[] = [
+// Internal user type with required password
+interface InternalUser extends User {
+  hashedPassword: string
+}
+
+// Mock database of users - in production, use a real database
+let users: InternalUser[] = [
   {
     id: "1",
     name: "Demo User",
     email: "demo@example.com",
     image: "/placeholder.svg?height=32&width=32",
     createdAt: new Date().toISOString(),
+    hashedPassword: bcrypt.hashSync("password123", 10) // Pre-hashed for demo
   },
 ]
 
@@ -33,7 +43,10 @@ const signInSchema = z.object({
 const signUpSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
   email: z.string().email({ message: "Please enter a valid email address" }),
-  password: z.string().min(8, { message: "Password must be at least 8 characters" }),
+  password: z.string().min(8, { message: "Password must be at least 8 characters" })
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/, {
+      message: "Password must contain at least one uppercase letter, one lowercase letter, one number and one special character"
+    }),
 })
 
 const updateProfileSchema = z.object({
@@ -41,15 +54,29 @@ const updateProfileSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
 })
 
+// JWT helper functions
+const JWT_SECRET = getEnv('JWT_SECRET', 'your-secret-key')
+const COOKIE_SECRET = getEnv('COOKIE_SECRET', 'your-cookie-secret')
+
+function generateToken(userId: string): string {
+  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: '7d' })
+}
+
+function verifyToken(token: string): { userId: string } | null {
+  try {
+    return jwt.verify(token, JWT_SECRET) as { userId: string }
+  } catch {
+    return null
+  }
+}
+
 // Authentication actions
 export async function signIn(prevState: any, formData: FormData) {
-  // Validate form data
   const validatedFields = signInSchema.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
   })
 
-  // Return errors if validation fails
   if (!validatedFields.success) {
     return {
       errors: validatedFields.error.flatten().fieldErrors,
@@ -58,34 +85,9 @@ export async function signIn(prevState: any, formData: FormData) {
   }
 
   const { email, password } = validatedFields.data
-
-  // In a real app, you would verify credentials against a database
-  // For demo purposes, we'll accept any credentials that match our demo user
-  // or any valid email with password "password123"
   const user = users.find((u) => u.email === email)
 
-  if (!user) {
-    // For demo purposes, create a new user if email doesn't exist
-    if (password === "password123") {
-      const newUser: User = {
-        id: Math.random().toString(36).substring(2, 9),
-        name: email.split("@")[0],
-        email,
-        createdAt: new Date().toISOString(),
-      }
-      users.push(newUser)
-
-      // Set auth cookie
-      cookies().set("auth", JSON.stringify({ userId: newUser.id }), {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        maxAge: 60 * 60 * 24 * 7, // 1 week
-        path: "/",
-      })
-
-      redirect("/dashboard")
-    }
-
+  if (!user || !bcrypt.compareSync(password, user.hashedPassword)) {
     return {
       errors: {
         email: ["Invalid email or password"],
@@ -95,10 +97,17 @@ export async function signIn(prevState: any, formData: FormData) {
     }
   }
 
-  // Set auth cookie
-  cookies().set("auth", JSON.stringify({ userId: user.id }), {
+  // Generate JWT token
+  const token = generateToken(user.id)
+
+  // Set secure cookie with JWT
+  const cookieStore = await cookies()
+  cookieStore.set({
+    name: "auth-token",
+    value: token,
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
     maxAge: 60 * 60 * 24 * 7, // 1 week
     path: "/",
   })
@@ -107,14 +116,12 @@ export async function signIn(prevState: any, formData: FormData) {
 }
 
 export async function signUp(prevState: any, formData: FormData) {
-  // Validate form data
   const validatedFields = signUpSchema.safeParse({
     name: formData.get("name"),
     email: formData.get("email"),
     password: formData.get("password"),
   })
 
-  // Return errors if validation fails
   if (!validatedFields.success) {
     return {
       errors: validatedFields.error.flatten().fieldErrors,
@@ -124,7 +131,6 @@ export async function signUp(prevState: any, formData: FormData) {
 
   const { name, email, password } = validatedFields.data
 
-  // Check if user already exists
   if (users.some((u) => u.email === email)) {
     return {
       errors: {
@@ -134,20 +140,31 @@ export async function signUp(prevState: any, formData: FormData) {
     }
   }
 
+  // Hash password
+  const hashedPassword = bcrypt.hashSync(password, 10)
+
   // Create new user
-  const newUser: User = {
+  const newUser: InternalUser = {
     id: Math.random().toString(36).substring(2, 9),
     name,
     email,
+    hashedPassword,
     createdAt: new Date().toISOString(),
   }
 
   users.push(newUser)
 
-  // Set auth cookie
-  cookies().set("auth", JSON.stringify({ userId: newUser.id }), {
+  // Generate JWT token
+  const token = generateToken(newUser.id)
+
+  // Set secure cookie with JWT
+  const cookieStore = await cookies()
+  cookieStore.set({
+    name: "auth-token",
+    value: token,
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
     maxAge: 60 * 60 * 24 * 7, // 1 week
     path: "/",
   })
@@ -156,8 +173,8 @@ export async function signUp(prevState: any, formData: FormData) {
 }
 
 export async function signOut() {
-  // Delete auth cookie
-  cookies().delete("auth")
+  const cookieStore = await cookies()
+  cookieStore.delete("auth-token")
   redirect("/signin")
 }
 
@@ -219,15 +236,27 @@ export async function updateProfile(prevState: any, formData: FormData) {
 
 // Helper functions
 export async function getCurrentUser(): Promise<User | undefined> {
-  const authCookie = cookies().get("auth")
+  const cookieStore = await cookies()
+  const authCookie = cookieStore.get("auth-token")
 
   if (!authCookie) {
     return undefined
   }
 
   try {
-    const { userId } = JSON.parse(authCookie.value)
-    return users.find((u) => u.id === userId)
+    const decoded = verifyToken(authCookie.value)
+    if (!decoded) {
+      return undefined
+    }
+
+    const user = users.find((u) => u.id === decoded.userId)
+    if (!user) {
+      return undefined
+    }
+
+    // Don't expose the hashed password
+    const { hashedPassword, ...safeUser } = user
+    return safeUser
   } catch (error) {
     return undefined
   }

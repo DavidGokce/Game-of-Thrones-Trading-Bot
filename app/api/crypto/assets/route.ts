@@ -1,12 +1,17 @@
 import { NextResponse } from "next/server"
 import type { AssetsResponse } from "@/lib/api-types"
+import { getEnv } from "@/lib/env"
 
-const CMC_API_KEY = 'f7cdd94d-5862-4910-b8ea-f8a5917f31d5'
+const CMC_API_KEY = getEnv('COINMARKETCAP_API_KEY')
 const CMC_API_URL = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest'
 
 // API route to proxy requests to CoinMarketCap API
 export async function GET(request: Request) {
   try {
+    if (!CMC_API_KEY) {
+      throw new Error('CoinMarketCap API key not configured')
+    }
+
     const { searchParams } = new URL(request.url)
     const limit = searchParams.get('limit') || '10'
 
