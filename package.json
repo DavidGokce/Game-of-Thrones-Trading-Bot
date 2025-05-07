@@ -1,7 +1,11 @@
 {
-  "name": "my-v0-project",
+  "name": "crypto-trading-dashboard",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "18.17.0",
+    "npm": "9.6.7"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
