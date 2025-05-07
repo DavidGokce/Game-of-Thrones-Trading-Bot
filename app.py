@@ -67,12 +67,13 @@ def init_client():
 
 try:
     client = init_client()
-    simulator = TradingSimulator(client)
-    logger.info("Initialization completed successfully")
 except Exception as e:
-    logger.error(f"Failed to initialize: {e}")
+    logger.error(f"Failed to initialize client: {e}")
     client = None
-    simulator = None
+
+# Always initialize the simulator, even if client is None
+simulator = TradingSimulator(client)
+logger.info("Simulator initialized (client may be None in mock mode)")
 
 @retry_on_error(max_retries=2)
 def get_crypto_prices():
