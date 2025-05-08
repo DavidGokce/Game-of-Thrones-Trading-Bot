@@ -8,7 +8,7 @@ import { PortfolioSummary } from "@/components/portfolio-summary"
 import { TaxCalculator } from "@/components/tax-calculator"
 import { MarketOverview } from "@/components/market-overview"
 import { Header } from "@/components/header"
-import { fetchTopAssets } from "@/lib/api"
+import { fetchTopAssets, API_BASE_URL } from "@/lib/api"
 import type { TransformedAsset } from "@/lib/api-types"
 import { Loader2 } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
@@ -81,7 +81,7 @@ export default function TradingDashboard() {
   }, [])
 
   const fetchPaperTradingData = async () => {
-    const response = await fetch('/api/paper-trading')
+    const response = await fetch(`${API_BASE_URL}/api/paper-trading`)
     const data = await response.json()
     setBalance(data.balance)
     setPositions(data.positions)
@@ -89,7 +89,7 @@ export default function TradingDashboard() {
   }
 
   const handleTrade = async (action: 'buy' | 'sell') => {
-    const response = await fetch('/api/paper-trading', {
+    const response = await fetch(`${API_BASE_URL}/api/paper-trading`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action, symbol, quantity }),

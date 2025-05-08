@@ -62,6 +62,7 @@ export interface AssetHistoryResponse {
 export interface PricePoint {
   price: number
   time: number
+  volume?: number
 }
 
 export type TimeFrame = "1h" | "1d" | "1w" | "1m" | "1y"

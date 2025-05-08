@@ -3,169 +3,163 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Game of Thrones Trading Bot</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Crypto Trading Bot Dashboard</title>
+    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=MedievalSharp&display=swap" rel="stylesheet">
-    <style>
-        body {
-            background: #f8f9fa;
-            font-family: 'Cinzel', serif;
-        }
-        .got-accent {
-            color: #8b0000;
-            font-family: 'MedievalSharp', cursive;
-        }
-        .dashboard-card {
-            background: #fff;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-            padding: 24px;
-            margin-bottom: 24px;
-        }
-        .price-up { color: #27ae60; }
-        .price-down { color: #c0392b; }
-        .portfolio-bar {
-            height: 12px;
-            border-radius: 6px;
-            background: #eee;
-            margin-bottom: 8px;
-            overflow: hidden;
-        }
-        .portfolio-btc { background: #f39c12; height: 100%; }
-        .portfolio-eth { background: #2980b9; height: 100%; }
-        .portfolio-other { background: #8b0000; height: 100%; }
-        .navbar {
-            background: #fff;
-            border-bottom: 1px solid #eee;
-        }
-        .navbar-brand {
-            font-family: 'MedievalSharp', cursive;
-            color: #8b0000 !important;
-            font-size: 1.7rem;
-        }
-        .market-table th, .market-table td {
-            vertical-align: middle;
-        }
-        .note-sim {
-            background: #fff3cd;
-            color: #856404;
-            border: 1px solid #ffeeba;
-            border-radius: 6px;
-            padding: 10px 16px;
-            margin-bottom: 18px;
-            font-size: 1rem;
-        }
-    </style>
 </head>
-<body>
-<nav class="navbar navbar-expand-lg mb-4">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="#">Game of Thrones Trading Bot</a>
-        <span class="navbar-text ms-auto">Dashboard &nbsp;|&nbsp; Markets &nbsp;|&nbsp; Portfolio &nbsp;|&nbsp; Transactions</span>
-    </div>
-</nav>
-<div class="container">
-    <div class="note-sim mb-4">
-        <strong>Note:</strong> Using simulated market data. Real-time API connection unavailable.
-    </div>
-    <div class="row g-4">
-        <!-- Main Chart and Market Overview -->
-        <div class="col-lg-8">
-            <div class="dashboard-card mb-4">
-                <div class="d-flex align-items-center mb-3">
-                    <img src="https://cryptologos.cc/logos/bitcoin-btc-logo.png?v=026" alt="BTC" width="32" class="me-2">
-                    <h2 class="mb-0">Bitcoin <span class="fs-4 text-muted">(BTC)</span></h2>
-                    <span class="ms-auto fs-3" id="btc-price">$0.00</span>
-                    <span class="ms-3 fs-5 price-up" id="btc-change">+0.00%</span>
-                </div>
-                <div id="simulationChart" style="height:350px;"></div>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">Crypto Trading Bot Dashboard</h1>
+            <p class="text-gray-600">Real-time trading data and positions</p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <!-- Price Chart -->
+            <div class="bg-white p-6 rounded-lg shadow-lg">
+                <h2 class="text-xl font-semibold mb-4">Price Chart</h2>
+                <div id="priceChart" class="w-full h-96"></div>
             </div>
-            <div class="dashboard-card">
-                <h5 class="mb-3">Market Overview</h5>
-                <table class="table market-table">
-                    <thead>
-                        <tr>
-                            <th>Asset</th>
-                            <th>Price</th>
-                            <th>24h Change</th>
-                            <th>24h Volume</th>
-                            <th>Market Cap</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><img src="https://cryptologos.cc/logos/bitcoin-btc-logo.png?v=026" width="20"> Bitcoin</td>
-                            <td id="btc-table-price">$0.00</td>
-                            <td class="price-up">+2.34%</td>
-                            <td>25.0B</td>
-                            <td>1200.0B</td>
-                        </tr>
-                        <tr>
-                            <td><img src="https://cryptologos.cc/logos/ethereum-eth-logo.png?v=026" width="20"> Ethereum</td>
-                            <td id="eth-table-price">$0.00</td>
-                            <td class="price-up">+1.56%</td>
-                            <td>15.0B</td>
-                            <td>420.0B</td>
-                        </tr>
-                        <tr>
-                            <td><img src="https://cryptologos.cc/logos/solana-sol-logo.png?v=026" width="20"> Solana</td>
-                            <td>$142.65</td>
-                            <td class="price-down">-0.87%</td>
-                            <td>5.0B</td>
-                            <td>65.0B</td>
-                        </tr>
-                    </tbody>
-                </table>
+
+            <!-- Trading Controls -->
+            <div class="bg-white p-6 rounded-lg shadow-lg">
+                <h2 class="text-xl font-semibold mb-4">Trading Controls</h2>
+                <div class="mb-4">
+                    <p class="text-gray-700">Current Balance: <span id="balance" class="font-semibold">$0.00</span></p>
+                </div>
+                <div class="flex space-x-4">
+                    <button onclick="executeTrade('buy')" class="bg-green-500 text-white px-6 py-2 rounded hover:bg-green-600">Buy</button>
+                    <button onclick="executeTrade('sell')" class="bg-red-500 text-white px-6 py-2 rounded hover:bg-red-600">Sell</button>
+                </div>
             </div>
         </div>
-        <!-- Place Order and Portfolio -->
-        <div class="col-lg-4">
-            <div class="dashboard-card mb-4">
-                <h5 class="mb-3">Place Order</h5>
-                <div class="btn-group mb-3 w-100" role="group">
-                    <button class="btn btn-success">Buy</button>
-                    <button class="btn btn-outline-danger">Sell</button>
-                </div>
-                <div class="mb-2">
-                    <label class="form-label">Order Type</label>
-                    <div class="btn-group w-100" role="group">
-                        <button class="btn btn-dark">Market</button>
-                        <button class="btn btn-outline-secondary">Limit</button>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Open Positions -->
+            <div class="bg-white p-6 rounded-lg shadow-lg">
+                <h2 class="text-xl font-semibold mb-4">Open Positions</h2>
+                <div id="openPositions" class="space-y-4"></div>
+            </div>
+
+            <!-- Closed Positions -->
+            <div class="bg-white p-6 rounded-lg shadow-lg">
+                <h2 class="text-xl font-semibold mb-4">Closed Positions</h2>
+                <div id="closedPositions" class="space-y-4"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize WebSocket connection
+        const socket = io();
+        let chart = null;
+
+        // Handle market updates
+        socket.on('market_update', (data) => {
+            updateChart(data);
+            updatePositions(data);
+            updateBalance(data);
+        });
+
+        // Initialize chart
+        function initChart() {
+            const layout = {
+                title: 'BTC/USDT Price',
+                xaxis: { title: 'Time' },
+                yaxis: { title: 'Price' },
+                plot_bgcolor: '#ffffff',
+                paper_bgcolor: '#ffffff'
+            };
+
+            chart = Plotly.newPlot('priceChart', [{
+                x: [],
+                y: [],
+                type: 'scatter',
+                name: 'Price'
+            }], layout);
+        }
+
+        // Update chart with new data
+        function updateChart(data) {
+            const update = {
+                x: [data.timestamp],
+                y: [data.close]
+            };
+
+            Plotly.update('priceChart', update);
+        }
+
+        // Update positions display
+        function updatePositions(data) {
+            // Update open positions
+            const openPositionsHtml = data.positions.map(position => `
+                <div class="border p-4 rounded">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <p class="font-semibold">${position.symbol}</p>
+                            <p class="text-sm text-gray-600">Entry: $${position.entry_price.toFixed(2)}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-semibold">${position.side.toUpperCase()}</p>
+                            <p class="text-sm text-gray-600">Qty: ${position.quantity.toFixed(4)}</p>
+                        </div>
                     </div>
                 </div>
-                <div class="mb-2">
-                    <label class="form-label">Amount</label>
-                    <input type="number" class="form-control" placeholder="0" min="0">
+            `).join('');
+            document.getElementById('openPositions').innerHTML = openPositionsHtml || '<p class="text-gray-500">No open positions</p>';
+
+            // Update closed positions
+            const closedPositionsHtml = data.closed_positions.map(position => `
+                <div class="border p-4 rounded">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <p class="font-semibold">${position.symbol}</p>
+                            <p class="text-sm text-gray-600">Entry: $${position.entry_price.toFixed(2)}</p>
+                            <p class="text-sm text-gray-600">Exit: $${position.exit_price.toFixed(2)}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-semibold ${position.pnl >= 0 ? 'text-green-500' : 'text-red-500'}">
+                                ${position.pnl >= 0 ? '+' : ''}$${position.pnl.toFixed(2)}
+                            </p>
+                            <p class="text-sm text-gray-600">${position.side.toUpperCase()}</p>
+                        </div>
+                    </div>
                 </div>
-                <div class="mb-2">
-                    <label class="form-label">Total</label>
-                    <input type="text" class="form-control" placeholder="$0.00" readonly>
-                </div>
-                <button class="btn btn-success w-100 mt-2">Buy BTC</button>
-            </div>
-            <div class="dashboard-card">
-                <h5 class="mb-3">Portfolio</h5>
-                <div class="mb-2">Total Value <span class="float-end fw-bold" id="portfolio-value">$0.00</span></div>
-                <div class="portfolio-bar mb-2">
-                    <div class="portfolio-btc" style="width:65%"></div>
-                </div>
-                <div class="mb-1">Bitcoin <span class="float-end">65%</span></div>
-                <div class="portfolio-bar mb-2">
-                    <div class="portfolio-eth" style="width:25%"></div>
-                </div>
-                <div class="mb-1">Ethereum <span class="float-end">25%</span></div>
-                <div class="portfolio-bar mb-2">
-                    <div class="portfolio-other" style="width:10%"></div>
-                </div>
-                <div class="mb-1">Other <span class="float-end">10%</span></div>
-            </div>
-        </div>
-    </div>
-</div>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-// TODO: Add JS to fetch and update prices, chart, and portfolio dynamically
-</script>
+            `).join('');
+            document.getElementById('closedPositions').innerHTML = closedPositionsHtml || '<p class="text-gray-500">No closed positions</p>';
+        }
+
+        // Update balance display
+        function updateBalance(data) {
+            document.getElementById('balance').textContent = `$${data.balance.toFixed(2)}`;
+        }
+
+        // Execute trade
+        async function executeTrade(action) {
+            try {
+                const response = await fetch('/api/trade', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ action })
+                });
+                
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to execute trade');
+                }
+                
+                // Success notification could be added here
+            } catch (error) {
+                console.error('Trade execution error:', error);
+                // Error notification could be added here
+            }
+        }
+
+        // Initialize chart on page load
+        document.addEventListener('DOMContentLoaded', initChart);
+    </script>
 </body>
 </html> 

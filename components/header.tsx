@@ -8,92 +8,109 @@ import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { ModeToggle } from "@/components/mode-toggle"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { User } from "@/lib/auth"
+import { signOut } from "@/lib/auth"
 
-export function Header() {
+interface HeaderProps {
+  user?: User
+}
+
+export function Header({ user }: HeaderProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between px-4">
-        <div className="flex items-center gap-2 md:gap-4">
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden">
-                <Menu className="h-5 w-5" />
-                <span className="sr-only">Toggle menu</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-[240px] sm:w-[300px]">
-              <nav className="flex flex-col gap-4 mt-8">
-                <Link href="#" className="text-sm font-medium transition-colors hover:text-primary">
-                  Dashboard
-                </Link>
-                <Link href="#" className="text-sm font-medium transition-colors hover:text-primary">
-                  Markets
-                </Link>
-                <Link href="#" className="text-sm font-medium transition-colors hover:text-primary">
-                  Portfolio
-                </Link>
-                <Link href="#" className="text-sm font-medium transition-colors hover:text-primary">
-                  Transactions
-                </Link>
-                <Link href="#" className="text-sm font-medium transition-colors hover:text-primary">
-                  Settings
-                </Link>
-              </nav>
-            </SheetContent>
-          </Sheet>
-          <Link href="#" className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-md bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center">
-              <span className="font-bold text-white text-sm">T</span>
-            </div>
-            <span className="font-semibold text-xl hidden md:inline-block">Trade</span>
+      <div className="container flex h-14 items-center">
+        <div className="mr-4 flex">
+          <Link href="/" className="mr-6 flex items-center space-x-2">
+            <span className="font-bold">Crypto Trading</span>
           </Link>
-          <nav className="hidden md:flex items-center gap-6">
-            <Link href="#" className="text-sm font-medium transition-colors hover:text-primary">
-              Dashboard
-            </Link>
-            <Link href="#" className="text-sm font-medium transition-colors hover:text-primary">
-              Markets
-            </Link>
-            <Link href="#" className="text-sm font-medium transition-colors hover:text-primary">
-              Portfolio
-            </Link>
-            <Link href="#" className="text-sm font-medium transition-colors hover:text-primary">
-              Transactions
-            </Link>
-          </nav>
         </div>
-        <div className="flex items-center gap-2">
-          {isSearchOpen ? (
-            <div className="relative hidden md:block">
-              <Input
-                placeholder="Search markets..."
-                className="w-[200px] pl-8"
-                autoFocus
-                onBlur={() => setIsSearchOpen(false)}
-              />
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            </div>
-          ) : (
-            <Button variant="ghost" size="icon" onClick={() => setIsSearchOpen(true)} className="hidden md:flex">
-              <Search className="h-5 w-5" />
-              <span className="sr-only">Search</span>
-            </Button>
-          )}
-          <ThemeToggle />
-          <Button variant="ghost" size="icon">
-            <Bell className="h-5 w-5" />
-            <span className="sr-only">Notifications</span>
-          </Button>
-          <Button variant="ghost" size="icon" className="hidden md:flex">
-            <Settings className="h-5 w-5" />
-            <span className="sr-only">Settings</span>
-          </Button>
-          <Avatar className="h-8 w-8">
-            <AvatarImage src="/placeholder.svg?height=32&width=32" alt="User" />
-            <AvatarFallback>U</AvatarFallback>
-          </Avatar>
+        <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
+          <div className="w-full flex-1 md:w-auto md:flex-none">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="md:hidden">
+                  <Menu className="h-5 w-5" />
+                  <span className="sr-only">Toggle menu</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-[240px] sm:w-[300px]">
+                <nav className="flex flex-col gap-4 mt-8">
+                  <Link href="#" className="text-sm font-medium transition-colors hover:text-primary">
+                    Dashboard
+                  </Link>
+                  <Link href="#" className="text-sm font-medium transition-colors hover:text-primary">
+                    Markets
+                  </Link>
+                  <Link href="#" className="text-sm font-medium transition-colors hover:text-primary">
+                    Portfolio
+                  </Link>
+                  <Link href="#" className="text-sm font-medium transition-colors hover:text-primary">
+                    Transactions
+                  </Link>
+                  <Link href="#" className="text-sm font-medium transition-colors hover:text-primary">
+                    Settings
+                  </Link>
+                </nav>
+              </SheetContent>
+            </Sheet>
+          </div>
+          <nav className="flex items-center space-x-2">
+            <ModeToggle />
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user.image} alt={user.name} />
+                      <AvatarFallback>{user.name?.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">{user.name}</p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {user.email}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile">Profile</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/settings">Settings</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="cursor-pointer"
+                    onSelect={(event) => {
+                      event.preventDefault()
+                      signOut()
+                    }}
+                  >
+                    Sign out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button asChild variant="default">
+                <Link href="/signin">Sign In</Link>
+              </Button>
+            )}
+          </nav>
         </div>
       </div>
     </header>

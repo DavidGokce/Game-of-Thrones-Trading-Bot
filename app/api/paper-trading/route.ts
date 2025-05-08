@@ -5,11 +5,20 @@ const paperTrading = PaperTrading.getInstance();
 
 export async function GET() {
   await paperTrading.updatePrices();
-  return NextResponse.json({
+  
+  // Disable caching to ensure real-time updates
+  const response = NextResponse.json({
     balance: paperTrading.getBalance(),
     positions: paperTrading.getPositions(),
     transactions: paperTrading.getTransactions(),
   });
+
+  // Set headers to prevent caching
+  response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  response.headers.set('Pragma', 'no-cache');
+  response.headers.set('Expires', '0');
+
+  return response;
 }
 
 export async function POST(request: Request) {
